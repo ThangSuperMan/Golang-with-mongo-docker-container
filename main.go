@@ -1,36 +1,44 @@
 package main
 
 import (
+	"GoAndMongo/helper"
 	"context"
 	"fmt"
-	"log"
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"html/template"
+	"net/http"
+	"time"
 )
 
 var (
 	mongoURI = "mongodb://admin:password@localhost:27017"
 )
 
-func haltOn(err error) {
-	if err != nil {
-		log.Fatal("Error here: ", err)
-	}
+func renderHomePage(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("renderHomePage")
+	t, err := template.ParseFiles("index.html")
+	helper.HaltOn(err)
+	t.Execute(w, nil)
+}
+
+func handler() {
+	http.HandleFunc("/", renderHomePage)
 }
 
 func main() {
-	fmt.Println("hello")
+	handler()
+	port := "3002"
+	fmt.Println("Listenning on the port :>> ", port)
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
-	haltOn(err)
+	helper.HaltOn(err)
 
 	// context := context.Background()
 	deadlineInsertTime := 1000 * time.Millisecond
 	context, _ := context.WithTimeout(context.Background(), deadlineInsertTime)
 	err = client.Connect(context)
-	haltOn(err)
+	helper.HaltOn(err)
 
 	fmt.Println("Connected to the mongoDB succesfully!")
 
@@ -38,16 +46,17 @@ func main() {
 
 	demoDB := client.Database("demo")
 	// err = demoDB.CreateCollection(context, "cats")
-	// haltOn(err)
+	// helper.HaltOn(err)
 
 	catsCollection := demoDB.Collection("cats")
 
 	fmt.Println("catsCollection  :>> ", catsCollection)
 	result, err := catsCollection.InsertOne(context, bson.D{
-		{Key: "name", Value: "Thang"},
+		{Key: "name", Value: "Bich"},
 		{Key: "age", Value: 20},
 	})
-	haltOn(err)
+	helper.HaltOn(err)
 
 	fmt.Println("Result :>> ", result)
+	http.ListenAndServe(":"+port, nil)
 }
